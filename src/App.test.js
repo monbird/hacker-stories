@@ -7,13 +7,11 @@ import {
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
-import App, {
-    storiesReducer,
-    SearchForm,
-    // InputWithLabel,
-    // List,
-    Item,
-} from './App';
+import App, { storiesReducer } from './App';
+import SearchForm from './SearchForm';
+import { Item } from './List';
+// InputWithLabel - not tested
+// List - not tested
 
 const storyOne = {
     title: 'React',

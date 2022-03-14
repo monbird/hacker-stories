@@ -1,9 +1,11 @@
 import React from 'react';
 import axios from 'axios';
 import styles from './App.module.css';
+import cs from 'classnames'; /* A simple javascript utility for conditionally joining classNames together */
+import { ReactComponent as Check } from './check-solid.svg';
+import { ReactComponent as Search } from './search-solid.svg';
+
 import logo from './logo.svg';
-import List from './List';
-import SearchForm from './SearchForm';
 
 const API_ENDPOINT = 'https://hn.algolia.com/api/v1/search?query=';
 
@@ -195,5 +197,126 @@ const App = () => {
     );
 };
 
+type SearchFormProps = {
+    searchTerm: string;
+    onSearchInput: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    onSearchSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+};
+
+const SearchForm = ({
+    searchTerm,
+    onSearchInput,
+    onSearchSubmit,
+}: SearchFormProps) => (
+    <form onSubmit={onSearchSubmit} className={styles.searchForm}>
+        <InputWithLabel
+            id="search"
+            value={searchTerm}
+            isFocused
+            onInputChange={onSearchInput}
+        >
+            Search:
+            {/* <strong>Search: </strong> */}
+        </InputWithLabel>
+        <button
+            type="submit"
+            disabled={!searchTerm}
+            className={cs(styles.button, styles.buttonLarge)}
+            // className={cs(styles.button, { [styles.buttonLarge]: true })}    alternative
+        >
+            <Search height="16px" width="16px" />
+            Submit
+        </button>
+    </form>
+);
+
+type InputWithLabelProps = {
+    id: string;
+    value: string;
+    type?: string;
+    onInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    isFocused?: boolean;
+    children: React.ReactNode;
+};
+
+const InputWithLabel = ({
+    id,
+    value,
+    type = 'text',
+    onInputChange,
+    isFocused,
+    children, // use the children prop to access/render everything that has been passed down from above between the parent's element tags
+}: InputWithLabelProps) => {
+    const inputRef = React.useRef<HTMLInputElement>(null!);
+
+    React.useEffect(() => {
+        if (isFocused && inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, [isFocused]);
+
+    return (
+        <>
+            <label htmlFor={id} className={styles.label}>
+                {children}
+            </label>
+            &nbsp;
+            <input
+                ref={inputRef}
+                id={id}
+                type={type}
+                value={value}
+                autoFocus={isFocused}
+                onChange={onInputChange}
+                className={styles.input}
+            />
+        </>
+    );
+};
+
+type ListProps = {
+    list: Stories;
+    onRemoveItem: (item: Story) => void;
+};
+
+const List = ({ list, onRemoveItem }: ListProps) => (
+    <>
+        {list.map((item) => (
+            <Item key={item.objectID} item={item} onRemoveItem={onRemoveItem} />
+        ))}
+    </>
+);
+
+// const List = React.memo(({ list, onRemoveItem }) => // memo makes equality check for the props i.e component will not re-render if there was no change in props (list & onRemoveItem)
+//     list.map((item) => (
+//         <Item key={item.objectID} item={item} onRemoveItem={onRemoveItem} />
+//     )));
+
+type ItemProps = {
+    item: Story;
+    onRemoveItem: (item: Story) => void;
+};
+
+const Item = ({ item, onRemoveItem }: ItemProps) => (
+    <div className={styles.item}>
+        <span style={{ width: '40%' }}>
+            <a href={item.url}>{item.title}</a>
+        </span>
+        <span style={{ width: '30%' }}>{item.author}</span>
+        <span style={{ width: '10%' }}>{item.num_comments}</span>
+        <span style={{ width: '10%' }}>{item.points}</span>
+        <span style={{ width: '10%' }}>
+            <button
+                type="button"
+                onClick={() => onRemoveItem(item)}
+                className={`${styles.button} ${styles.buttonSmall}`}
+            >
+                <Check height="18px" width="18px" />
+                Dismiss
+            </button>
+        </span>
+    </div>
+);
+
 export default App;
-export { storiesReducer };
+export { storiesReducer, SearchForm, InputWithLabel, List, Item };
