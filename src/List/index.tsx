@@ -1,6 +1,6 @@
 import React from 'react';
-import styles from './App.module.css';
-import { ReactComponent as Check } from './check-solid.svg';
+import styles from '../App.module.css';
+import { ReactComponent as Check } from '../check-solid.svg';
 
 type Story = {
     objectID: string;
