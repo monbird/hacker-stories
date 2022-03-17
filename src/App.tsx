@@ -4,6 +4,7 @@ import styles from './App.module.css';
 import logo from './logo.svg';
 import List from './List';
 import SearchForm from './SearchForm';
+import LastSearches from './LastSearches';
 
 const API_ENDPOINT = 'https://hn.algolia.com/api/v1/search?query=';
 
@@ -103,13 +104,39 @@ const storiesReducer = (state: StoriesState, action: StoriesAction) => {
     }
 };
 
-// TODO: make it typescript friendly
-// const getSumComments = (stories) => {
-//     return stories.data.reduce(
-//         (result, value) => result + value.num_comments,
-//         0
-//     );
-// };
+const getSumComments = (stories: StoriesState) => {
+    return stories.data.reduce(
+        (result, value) => result + value.num_comments,
+        0
+    );
+};
+
+const extractSearchTerm = (url: string) => url.replace(API_ENDPOINT, '');
+
+const getLastSearches = (urls: string[]) => {
+    return urls
+        .reduce((result: string[], url: string, index: number) => {
+            const searchTerm = extractSearchTerm(url); // takes each url & extarcts searchTerm
+
+            if (index === 0) {
+                // first iteration
+                return result.concat(searchTerm); // apend to result
+            }
+
+            const previousSearchTerm = result[result.length - 1]; // find previousSearchTerm which is the last in the array
+
+            if (searchTerm === previousSearchTerm) {
+                // check if current searchTerm === previousSearchTerm
+                return result; // if so do nothing i.e prevent duplicated searches in a row
+            } else {
+                return result.concat(searchTerm); // if it's different then append it
+            }
+        }, []) // initial value - empty array
+        .slice(-6) // extract last 6 elements
+        .slice(0, -1); // then remove the last one so we don't show current search as a button
+};
+
+const getUrl = (searchTerm: string) => `${API_ENDPOINT}${searchTerm}`;
 
 const App = () => {
     const [searchTerm, setSearchTerm] = useSemiPersistentState(
@@ -117,7 +144,7 @@ const App = () => {
         'React'
     );
 
-    const [url, setUrl] = React.useState(`${API_ENDPOINT}${searchTerm}`);
+    const [urls, setUrls] = React.useState([getUrl(searchTerm)]);
 
     const [stories, dispatchStories] = React.useReducer(storiesReducer, {
         data: [],
@@ -132,7 +159,8 @@ const App = () => {
         });
 
         try {
-            const result = await axios.get(url);
+            const lastUrl = urls[urls.length - 1];
+            const result = await axios.get(lastUrl);
             dispatchStories({
                 type: 'STORIES_FETCH_SUCCESS',
                 payload: result.data.hits,
@@ -140,7 +168,7 @@ const App = () => {
         } catch {
             dispatchStories({ type: 'STORIES_FETCH_FAILURE' });
         }
-    }, [url]); // <- dependancy
+    }, [urls]); // <- dependancy
 
     React.useEffect(() => {
         handleFetchStories();
@@ -158,18 +186,29 @@ const App = () => {
     };
 
     const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-        setUrl(`${API_ENDPOINT}${searchTerm}`);
+        handleSearch(searchTerm);
         event.preventDefault();
     };
 
-    // TODO: make it typescript friendly
-    // const sumComments = React.useMemo(() => getSumComments(stories), [stories]); // useMemo returns memoized value from calling the function; then will call it only when there will be change in dependancy - stories
+    const handleLastSearch = (searchTerm: string) => {
+        setSearchTerm(searchTerm);
+        handleSearch(searchTerm);
+    };
+
+    const handleSearch = (searchTerm: string) => {
+        const url = getUrl(searchTerm);
+        setUrls(urls.concat(url));
+    };
+
+    // useMemo returns memoized value from calling the function; then will call it only when there will be change in dependancy - stories
+    const sumComments = React.useMemo(() => getSumComments(stories), [stories]);
+
+    const lastSearches = getLastSearches(urls);
 
     return (
         <div className={styles.container}>
             <h1 className={styles.headlinePrimary}>
-                {/* My Hacker Stories with {sumComments} comments. */}
-                My Hacker Stories
+                My Hacker Stories with {sumComments} comments.
             </h1>
 
             <img src={logo} className={styles.logo} alt="logo" />
@@ -178,6 +217,11 @@ const App = () => {
                 searchTerm={searchTerm}
                 onSearchInput={handleSearchInput}
                 onSearchSubmit={handleSearchSubmit}
+            />
+
+            <LastSearches
+                lastSearches={lastSearches}
+                onLastSearch={handleLastSearch}
             />
 
             {stories.isError && <p>Something went wrong...</p>}
