@@ -6,9 +6,10 @@ describe('App E2E test1', () => {
 });
 
 describe('App E2E test2', () => {
-    it('should have a header', () => {
+    it('should have a heade & label', () => {
         cy.visit('/');
 
-        cy.get('h1').should('have.text', 'My Hacker Stories');
+        cy.get('h1').contains(/My Hacker Stories/);
+        cy.get('label').contains('Search:');
     });
 });
