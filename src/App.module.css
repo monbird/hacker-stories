@@ -21,7 +21,6 @@
 }
 
 .item > span {
-    padding: 0 5px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -39,10 +38,6 @@
     transition: all 0.1s ease-in;
 }
 
-/* .button:focus {
-    outline: 3px solid red;
-} */
-
 .button:hover {
     background: #171212;
     color: #ffffff;
@@ -59,6 +54,10 @@
 
 .buttonLarge {
     padding: 10px;
+}
+
+.buttonActive {
+    color: red;
 }
 
 .searchForm {

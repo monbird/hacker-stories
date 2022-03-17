@@ -180,10 +180,6 @@ const App = () => {
                 onSearchSubmit={handleSearchSubmit}
             />
 
-            <div role="button" tabIndex={0}>
-                Click me
-            </div>
-
             {stories.isError && <p>Something went wrong...</p>}
 
             {stories.isLoading ? (
