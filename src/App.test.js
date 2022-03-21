@@ -74,11 +74,15 @@ describe('storiesReducer', () => {
 
     test('stories fetching success', () => {
         // Setup
-        const action = { type: 'STORIES_FETCH_SUCCESS', payload: stories };
-        const state = { data: [], isLoading: false, isError: false };
+        const action = {
+            type: 'STORIES_FETCH_SUCCESS',
+            payload: { list: stories, page: 0 },
+        };
+        const state = { data: [], page: 0, isLoading: false, isError: false };
 
         const expectedState = {
             data: stories,
+            page: 0,
             isLoading: false,
             isError: false,
         };
@@ -181,7 +185,7 @@ describe('SearchForm', () => {
 
     test('calls onSearchSubmit on button submit click', () => {
         render(<SearchForm {...SearchFormProps} />);
-        screen.debug();
+        // screen.debug();
         fireEvent.submit(screen.getByRole('button'));
 
         expect(SearchFormProps.onSearchSubmit).toHaveBeenCalledTimes(1);
@@ -205,8 +209,8 @@ describe('App', () => {
         // await act(() => promise);
         await waitFor(() => promise);
         // screen.debug();
+        
         expect(screen.queryByText(/loading/i)).toBeNull();
-
         expect(screen.getByText('React')).toBeInTheDocument();
         expect(screen.getByText('Redux')).toBeInTheDocument();
         expect(screen.getAllByText('Dismiss').length).toBe(2);
@@ -248,7 +252,9 @@ describe('App', () => {
     });
 
     test('searches for specific stories', async () => {
-        const reactPromise = Promise.resolve({ data: { hits: stories } });
+        const reactPromise = Promise.resolve({
+            data: { hits: stories, page: 0 },
+        });
 
         const anotherStory = {
             title: 'JavaScript',
@@ -260,7 +266,7 @@ describe('App', () => {
         };
 
         const javascriptPromise = Promise.resolve({
-            data: { hits: [anotherStory] },
+            data: { hits: [anotherStory], page: 0 },
         });
 
         axios.get.mockImplementation((url) => {
@@ -303,9 +309,8 @@ describe('App', () => {
         // fireEvent.submit(screen.queryByText('Submit'));
         userEvent.click(screen.queryByText('Submit'));
 
-        // 4. Second data fetching: retriving new data from the API
+        // 4. Second data fetching: retrieving new data from the API
         await waitFor(() => javascriptPromise);
-
         expect(screen.queryByText('Jordan Walke')).toBeNull();
         expect(screen.queryByText('Dan Abramov, Andrew Clark')).toBeNull();
         expect(screen.queryByText('Brendan Eich')).toBeInTheDocument();

@@ -6,7 +6,11 @@ import List from './List';
 import SearchForm from './SearchForm';
 import LastSearches from './LastSearches';
 
-const API_ENDPOINT = 'https://hn.algolia.com/api/v1/search?query=';
+// const API_ENDPOINT = 'https://hn.algolia.com/api/v1/search?query=react&page=0';
+const API_BASE = 'https://hn.algolia.com/api/v1';
+const API_SEARCH = '/search';
+const PARAM_SEARCH = 'query=';
+const PARAM_PAGE = 'page=';
 
 const useSemiPersistentState = (
     key: string,
@@ -43,6 +47,7 @@ type Stories = Array<Story>;
 
 type StoriesState = {
     data: Stories;
+    page: number;
     isLoading: boolean;
     isError: boolean;
 };
@@ -53,7 +58,10 @@ interface StoriesFetchInitAction {
 
 interface StoriesFetchSuccessAction {
     type: 'STORIES_FETCH_SUCCESS';
-    payload: Stories;
+    payload: {
+        list: Stories;
+        page: number;
+    };
 }
 
 interface StoriesFetchFailureAction {
@@ -84,7 +92,12 @@ const storiesReducer = (state: StoriesState, action: StoriesAction) => {
                 ...state,
                 isLoading: false,
                 isError: false,
-                data: action.payload,
+                // for initial & last searches use data/list from the first page/0 otherwise concat/extend the current list (i.e. when fetching with 'More' btn)
+                data:
+                    action.payload.page === 0
+                        ? action.payload.list
+                        : state.data.concat(action.payload.list),
+                page: action.payload.page,
             };
         case 'STORIES_FETCH_FAILURE':
             return {
@@ -111,7 +124,10 @@ const getSumComments = (stories: StoriesState) => {
     );
 };
 
-const extractSearchTerm = (url: string) => url.replace(API_ENDPOINT, '');
+const extractSearchTerm = (url: string) =>
+    url //  url at the start: 'https://hn.algolia.com/api/v1/search?query=react&page=0'
+        .substring(url.lastIndexOf('?') + 1, url.lastIndexOf('&')) // url after substring: 'query=react'
+        .replace(PARAM_SEARCH, ''); // url after replace: 'react'
 
 const getLastSearches = (urls: string[]) => {
     return urls
@@ -136,7 +152,8 @@ const getLastSearches = (urls: string[]) => {
         .slice(0, -1); // then remove the last one so we don't show current search as a button
 };
 
-const getUrl = (searchTerm: string) => `${API_ENDPOINT}${searchTerm}`;
+const getUrl = (searchTerm: string, page: number) =>
+    `${API_BASE}${API_SEARCH}?${PARAM_SEARCH}${searchTerm}&${PARAM_PAGE}${page}`;
 
 const App = () => {
     const [searchTerm, setSearchTerm] = useSemiPersistentState(
@@ -144,10 +161,11 @@ const App = () => {
         'React'
     );
 
-    const [urls, setUrls] = React.useState([getUrl(searchTerm)]);
+    const [urls, setUrls] = React.useState([getUrl(searchTerm, 0)]);
 
     const [stories, dispatchStories] = React.useReducer(storiesReducer, {
         data: [],
+        page: 0,
         isLoading: false,
         isError: false,
     });
@@ -163,7 +181,10 @@ const App = () => {
             const result = await axios.get(lastUrl);
             dispatchStories({
                 type: 'STORIES_FETCH_SUCCESS',
-                payload: result.data.hits,
+                payload: {
+                    list: result.data.hits,
+                    page: result.data.page,
+                },
             });
         } catch {
             dispatchStories({ type: 'STORIES_FETCH_FAILURE' });
@@ -186,18 +207,24 @@ const App = () => {
     };
 
     const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-        handleSearch(searchTerm);
+        handleSearch(searchTerm, 0);
         event.preventDefault();
     };
 
     const handleLastSearch = (searchTerm: string) => {
         setSearchTerm(searchTerm);
-        handleSearch(searchTerm);
+        handleSearch(searchTerm, 0);
     };
 
-    const handleSearch = (searchTerm: string) => {
-        const url = getUrl(searchTerm);
+    const handleSearch = (searchTerm: string, page: number) => {
+        const url = getUrl(searchTerm, page);
         setUrls(urls.concat(url));
+    };
+
+    const handleMore = () => {
+        const lastUrl = urls[urls.length - 1];
+        const searchTerm = extractSearchTerm(lastUrl);
+        handleSearch(searchTerm, stories.page + 1);
     };
 
     // useMemo returns memoized value from calling the function; then will call it only when there will be change in dependancy - stories
@@ -224,12 +251,22 @@ const App = () => {
                 onLastSearch={handleLastSearch}
             />
 
-            {stories.isError && <p>Something went wrong...</p>}
-
-            {stories.isLoading ? (
-                <p>Loading...</p>
+            {stories.isError ? (
+                <p>Something went wrong...</p>
             ) : (
-                <List list={stories.data} onRemoveItem={handleRemoveStory} />
+                <div>
+                    <List
+                        list={stories.data}
+                        onRemoveItem={handleRemoveStory}
+                    />
+                    {stories.isLoading ? (
+                        <p>Loading...</p>
+                    ) : (
+                        <button type="button" onClick={handleMore}>
+                            More
+                        </button>
+                    )}
+                </div>
             )}
         </div>
     );
