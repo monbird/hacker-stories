@@ -11,6 +11,7 @@ const API_BASE = 'https://hn.algolia.com/api/v1';
 const API_SEARCH = '/search';
 const PARAM_SEARCH = 'query=';
 const PARAM_PAGE = 'page=';
+const HITS_PER_PAGE = 'hitsPerPage=10';
 
 const useSemiPersistentState = (
     key: string,
@@ -124,10 +125,17 @@ const getSumComments = (stories: StoriesState) => {
     );
 };
 
-const extractSearchTerm = (url: string) =>
-    url //  url at the start: 'https://hn.algolia.com/api/v1/search?query=react&page=0'
-        .substring(url.lastIndexOf('?') + 1, url.lastIndexOf('&')) // url after substring: 'query=react'
-        .replace(PARAM_SEARCH, ''); // url after replace: 'react'
+const extractSearchTerm = (url: string) => {
+    const urlUrl = new URL(url);
+    const query = urlUrl.searchParams.get('query');
+    return query || '';
+};
+
+// alternative longer solution:
+// const extractSearchTerm = (url: string) =>
+//     url //  url at the start: 'https://hn.algolia.com/api/v1/search?query=react&page=0&hitsPerPage=10'
+//         .substring(url.lastIndexOf('?') + 1, url.lastIndexOf('&') - 7) // url after substring: 'query=react'
+//         .replace(PARAM_SEARCH, ''); // url after replace: 'react'
 
 const getLastSearches = (urls: string[]) => {
     return urls
@@ -136,7 +144,7 @@ const getLastSearches = (urls: string[]) => {
 
             if (index === 0) {
                 // first iteration
-                return result.concat(searchTerm); // apend to result
+                return result.concat(searchTerm); // append to result
             }
 
             const previousSearchTerm = result[result.length - 1]; // find previousSearchTerm which is the last in the array
@@ -153,7 +161,7 @@ const getLastSearches = (urls: string[]) => {
 };
 
 const getUrl = (searchTerm: string, page: number) =>
-    `${API_BASE}${API_SEARCH}?${PARAM_SEARCH}${searchTerm}&${PARAM_PAGE}${page}`;
+    `${API_BASE}${API_SEARCH}?${PARAM_SEARCH}${searchTerm}&${PARAM_PAGE}${page}&${HITS_PER_PAGE}`;
 
 const App = () => {
     const [searchTerm, setSearchTerm] = useSemiPersistentState(
