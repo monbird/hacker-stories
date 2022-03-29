@@ -33,7 +33,17 @@ const storyTwo = {
 
 const stories = [storyOne, storyTwo];
 
+// mocking axios
 jest.mock('axios');
+
+// mocking IntersectionObserver
+const observe = jest.fn();
+const unobserve = jest.fn();
+
+window.IntersectionObserver = jest.fn(() => ({
+    observe,
+    unobserve,
+}));
 
 describe('storiesReducer', () => {
     test('removes a story from all stories', () => {
@@ -206,10 +216,10 @@ describe('App', () => {
         // screen.debug();
         expect(screen.queryByText(/loading/i)).toBeInTheDocument();
 
-        // await act(() => promise);
+        // await act(() => promise);   // alternative to waitFor
         await waitFor(() => promise);
         // screen.debug();
-        
+
         expect(screen.queryByText(/loading/i)).toBeNull();
         expect(screen.getByText('React')).toBeInTheDocument();
         expect(screen.getByText('Redux')).toBeInTheDocument();

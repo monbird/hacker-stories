@@ -11,7 +11,7 @@ const API_BASE = 'https://hn.algolia.com/api/v1';
 const API_SEARCH = '/search';
 const PARAM_SEARCH = 'query=';
 const PARAM_PAGE = 'page=';
-const HITS_PER_PAGE = 'hitsPerPage=10';
+const HITS_PER_PAGE = 'hitsPerPage=20';
 
 const useSemiPersistentState = (
     key: string,
@@ -74,11 +74,16 @@ interface StoriesRemoveAction {
     payload: Story;
 }
 
+interface StoriesNextPageAction {
+    type: 'STORIES_NEXT_PAGE';
+}
+
 type StoriesAction =
     | StoriesFetchInitAction
     | StoriesFetchSuccessAction
     | StoriesFetchFailureAction
-    | StoriesRemoveAction;
+    | StoriesRemoveAction
+    | StoriesNextPageAction;
 
 const storiesReducer = (state: StoriesState, action: StoriesAction) => {
     switch (action.type) {
@@ -112,6 +117,11 @@ const storiesReducer = (state: StoriesState, action: StoriesAction) => {
                 data: state.data.filter(
                     (story) => action.payload.objectID !== story.objectID
                 ),
+            };
+        case 'STORIES_NEXT_PAGE':
+            return {
+                ...state,
+                page: state.page + 1,
             };
         default:
             throw new Error();
@@ -178,6 +188,8 @@ const App = () => {
         isError: false,
     });
 
+    const [lastElement, setLastElement] = React.useState(null);
+
     const handleFetchStories = React.useCallback(async () => {
         // useCallback creates/returns new version of this callback handler when one of its dependancies change
         dispatchStories({
@@ -187,6 +199,7 @@ const App = () => {
         try {
             const lastUrl = urls[urls.length - 1];
             const result = await axios.get(lastUrl);
+
             dispatchStories({
                 type: 'STORIES_FETCH_SUCCESS',
                 payload: {
@@ -202,6 +215,13 @@ const App = () => {
     React.useEffect(() => {
         handleFetchStories();
     }, [handleFetchStories]);
+
+    // as the page number changes, the API will be called again and more stories will be fetched.
+    React.useEffect(() => {
+        if (stories.page > 0) {
+            handleMore(stories.page);
+        }
+    }, [stories.page]);
 
     const handleRemoveStory = React.useCallback((item: Story) => {
         dispatchStories({
@@ -229,11 +249,42 @@ const App = () => {
         setUrls(urls.concat(url));
     };
 
-    const handleMore = () => {
+    const handleMore = (pageNum: number) => {
         const lastUrl = urls[urls.length - 1];
         const searchTerm = extractSearchTerm(lastUrl);
-        handleSearch(searchTerm, stories.page + 1);
+        handleSearch(searchTerm, pageNum);
     };
+
+    // creates useRef in order to access DOM element (here <Item/> element)
+    const observer: any = React.useRef();
+
+    // defines the Intersection Observer and stores it the previously created observer variable. The intersection observer have a callback function which accept array of all the intersecting objects. But since, we will be passing only last element to it, we are always checking the 0th entry of this array. If that element intersects means become visible, we will increment the page number.
+    React.useEffect(() => {
+        observer.current = new IntersectionObserver((entries) => {
+            const first = entries[0];
+            if (first.isIntersecting) {
+                dispatchStories({
+                    type: 'STORIES_NEXT_PAGE',
+                });
+            }
+        });
+    }, []);
+
+    // when the value of lastElement change the useEffect will run and pass the lastElement to our intersection observer to observe. The observer will then check the intersection of this element and increment the page count once this happens.
+    React.useEffect(() => {
+        const currentElement = lastElement;
+        const currentObserver = observer.current;
+
+        if (currentElement && currentObserver.observe) {
+            currentObserver.observe(currentElement);
+        }
+
+        return () => {
+            if (currentElement && currentObserver.unobserve) {
+                currentObserver.unobserve(currentElement);
+            }
+        };
+    }, [lastElement]);
 
     // useMemo returns memoized value from calling the function; then will call it only when there will be change in dependancy - stories
     const sumComments = React.useMemo(() => getSumComments(stories), [stories]);
@@ -266,14 +317,9 @@ const App = () => {
                     <List
                         list={stories.data}
                         onRemoveItem={handleRemoveStory}
+                        setLastElement={setLastElement} // passes the setting function to the <Item /> element
                     />
-                    {stories.isLoading ? (
-                        <p>Loading...</p>
-                    ) : (
-                        <button type="button" onClick={handleMore}>
-                            More
-                        </button>
-                    )}
+                    {stories.isLoading ? <p>Loading...</p> : <></>}
                 </div>
             )}
         </div>

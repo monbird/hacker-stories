@@ -27,9 +27,15 @@ type Stories = Array<Story>;
 type ListProps = {
     list: Stories;
     onRemoveItem: (item: Story) => void;
+    setLastElement: (instance: any) => void;
 };
 
-const List = ({ list, onRemoveItem }: ListProps) => {
+// const List = React.memo(({ list, onRemoveItem }) => // memo makes equality check for the props i.e component will not re-render if there was no change in props (list & onRemoveItem)
+//     list.map((item) => (
+//         <Item key={item.objectID} item={item} onRemoveItem={onRemoveItem} />
+//     )));
+
+const List = ({ list, onRemoveItem, setLastElement }: ListProps) => {
     const [sort, setSort] = React.useState({
         sortKey: 'NONE',
         isReverse: false,
@@ -140,24 +146,22 @@ const List = ({ list, onRemoveItem }: ListProps) => {
                     key={item.objectID}
                     item={item}
                     onRemoveItem={onRemoveItem}
+                    setLastElement={setLastElement}
                 />
             ))}
         </>
     );
 };
 
-// const List = React.memo(({ list, onRemoveItem }) => // memo makes equality check for the props i.e component will not re-render if there was no change in props (list & onRemoveItem)
-//     list.map((item) => (
-//         <Item key={item.objectID} item={item} onRemoveItem={onRemoveItem} />
-//     )));
-
 type ItemProps = {
     item: Story;
     onRemoveItem: (item: Story) => void;
+    setLastElement: (instance: any) => void;
 };
 
-const Item = ({ item, onRemoveItem }: ItemProps) => (
-    <div className={styles.item}>
+const Item = ({ item, onRemoveItem, setLastElement }: ItemProps) => (
+    // since we map through the List of Items each Item will get a ref property assigned but only the last one will count as each following element will overwrite the previous one.
+    <div className={styles.item} ref={setLastElement}>
         <span style={{ width: '40%' }}>
             <a href={item.url}>{item.title}</a>
         </span>
