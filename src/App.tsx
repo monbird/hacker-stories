@@ -188,7 +188,14 @@ const App = () => {
         isError: false,
     });
 
-    const [lastElement, setLastElement] = React.useState(null);
+    const [lastElement, _setLastElement] = React.useState(null);
+
+    // modify setLastElement method to prevent setting last element to null
+    const setLastElement = (element: any) => {
+        if (element) {
+            _setLastElement(element);
+        }
+    };
 
     const handleFetchStories = React.useCallback(async () => {
         // useCallback creates/returns new version of this callback handler when one of its dependancies change
